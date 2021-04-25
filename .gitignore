@@ -14,6 +14,8 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 
+internal_notes.txt
+
 # =========================
 # Operating System Files
 # =========================
