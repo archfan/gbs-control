@@ -1,4 +1,4 @@
-# Arduino Si5351 Library tuned for size and click noise free. #
+# Arduino Si5351 Library tuned for size and click noise free #
 
 This library is tuned for size on the Arduino platform, it will control CLK0, CLK1 and CLK2 outputs for the Si5351A (the version with just 3 clocks out, but you will not be able to use the three at once).
 
@@ -7,8 +7,8 @@ This library is tuned for size on the Arduino platform, it will control CLK0, CL
 This work is based on the previous work of these great people:
 
 * [Etherkit/NT7S:](https://github.com/etherkit/Si5351Arduino) The mainstream full featured lib, with big code as well (based on Linux kernel code)
-* [QRP Labs demo code from Hans Summers:](http://qrp-labs.com/synth/si5351ademo.html) The smallest and simple ones on the net.
-* [DK7IH demo code:](https://radiotransmitter.wordpress.com/category/si5351a/) The first clickless noise code on the wild.
+* [QRP Labs demo code from Hans Summers:](http://qrp-labs.com/synth/si5351ademo.html) The smallest and simple ones on the net
+* [DK7IH demo code:](https://radiotransmitter.wordpress.com/category/si5351a/) The first clickless noise code on the wild
 * [Jerry Gaffke](https://github.com/afarhan/ubitx.git) integer routines for the Raduino and ubitx
 
 ## Set your Goal and make an estrategy ##
@@ -16,12 +16,14 @@ This work is based on the previous work of these great people:
 There is a few routines in the Internet to manage the Si5351 chip, all of them has a few distinct feature set because they use different strategies (different goals) that make them unique in some way.
 
 My goal is this:
+
 * Keep it as small as possible (Smallest firmware footprint)
 * Less phase and click noise possible (Playing with every trick possible)
+* Make it as fast as possible (thanks to @birdwes for I2C busrt mode write)
 
 The main purpose is to be used in Radio receiver projects, so this two mentioned goals are the golden rule.
 
-Let's list some of goals archeivements and bonuses:
+Let's list some of goals achievements and bonuses:
 
 **Small firmware footprint:**
 
@@ -47,9 +49,9 @@ I have learned a few tricks from many sources in the Internet and after some loc
 
 **Fast frequency changes:**
 
-This was a side effect of the last trick to minimize the click noise, see the "Click noise free" section below for details.
+This was a side effect of the last trick to minimize the click noise, see the "Click noise free" section below for details; also with the I2C busrt write contribution from @birdwes even the I2C writes takes a lot less time (implemented since version 0.7.0)
 
-Summary: other routines write all registers for every frequency change, I write half of them most of the time, speeding up the process.
+Summary: other routines write all registers for every frequency change, one byte at a time; I write half of them most of the time and in a bust mode speeding up the process a lot.
 
 **Two of three**
 
@@ -68,12 +70,13 @@ This are so far the implemented features (Any particular wish? use the Issues ta
 * Power control on each output independently (See _Si.setPower(clk, level)_ on the lib header)
 * Initial power defaults to the lowest level (2mA) for all outputs.
 * You don't need to include and configure the Wire (I2C) library, this lib do that for you already.
+* I2C writes are handled in busrt mode, just init the I2C once per frequency change and dump the registers content and close; saving the init for each byte sent as normal.
 * Frequency limits are not hard coded on the lib, so you can stress your hardware to it's particular limit (_You can move usually from ~3kHz to ~225 MHz, far away from the 8kHz to 160 MHz limits from the datasheet_)
 * You has a way to verify the status of a particular clock (_Enabled/Disabled by the Si.clkOn[clk] var_)
 * From v0.5 and beyond we saved more than 1 kbyte of your precious firmware space due to the use of all integer math now (Worst induced error is below +/- 1 Hz)
 * Overclock, yes, you can move the limits upward up to ~250MHz (see the "OVERCLOCK" section below)
 * Improved the click noise algorithm to get even more click noise reduction (see Click noise free section below)
-* Fast frequency changes as part of the improved click noise algorithm (see Click noise free section below)
+* Fast frequency changes as part of the improved click noise algorithm (see Click noise free section below) & I2C writes in burst mode.
 
 ## How to use the lib ##
 
@@ -172,7 +175,7 @@ But what if we can move the VCO frequency to a higher values?
 
 The overclock feature does just that, use a higher top limit for the VCO on the calculations. In my test with two batch of the Si5351A I can get safely up to 1.000 GHz without trouble; in one batch the PLL unlocks around 1.1 GHz and in the other about 1.050 GHz; so I recommend not going beyond 1.000 GHz.
 
-With a maximum VCO of 1.000 GHz and a lower division factor of 4 we have jumped from a 255 MHz to 250 MHz top frequency that can be generated with our cheap chip.
+With a maximum VCO of 1.000 GHz and a lower division factor of 4 we have jumped from a 225 MHz to 250 MHz top frequency that can be generated with our cheap chip.
 
 **Some "must include" WARNINGS:**
 
@@ -249,7 +252,13 @@ Again: You can't use CLK1 and CLK2 at the same time, as soon as you set one of t
 
 ## Author & contributors ##
 
-The only author is Pavel Milanes, CO7WT, a cuban amateur radio operator; reachable at pavelmc@gmail.com, Until now I have no contributors or sponsors.
+The main author is Pavel Milanes, CO7WT, a cuban amateur radio operator; reachable at pavelmc@gmail.com, Until now I have no contributors or sponsors.
+
+But I have received the contributions stated below:
+
+* @birdwes:
+  - I2C busrt mode
+  - Found & fixed a bug about freq calculations.
 
 ## Where to download the latest version? ##
 
@@ -261,11 +270,8 @@ See ChangeLog.md and Version files on this repository to know what are the lates
 
 No payment of whatsoever is required to use this code: this is [Free/Libre Software](https://en.wikipedia.org/wiki/Software_Libre), nevertheless donations are very welcomed.
 
-I live in Cuba island and the Internet/Cell is very expensive here (USD $1.00/hour), you can donate anonymously internet time or cell phone air time to me via [Ding Topups](https://www.ding.com/) to keep me connected and developing for the homebrewers community.
+I live in Cuba island and the Internet is very expensive here (USD $10.00 per 1GB of data), you can donate anonymously internet time or cell mobile data to me via [Ding Topups](https://www.ding.com/) to keep me connected and developing for the homebrew/DIY community.
 
-If you like to do so, please go to Ding, select Cuba, select Cubacell (for phone top up) or Nauta (for Internet time)
-
-* For phone topup use this number (My cell, feel free to call me if you like): +53 538-478-19
-* For internet time use this user (Nauta service): co7wt@nauta.com.cu (that's not an email but an user account name)
+If you like to do so, please go to Ding, select Cuba, select Cubacel and use my number `(+53) 538-478-19` (feel free to call me if you like)
 
 Thanks!
