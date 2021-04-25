@@ -1,16 +1,14 @@
-/* PersWiFiManager
-   version 3.0.1
-   https://r-downing.github.io/PersWiFiManager/
-
-   modified for inclusion in gbs-control
-   see /3rdparty/PersWiFiManager/ for original code and license
-*/
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 #ifndef PERSWIFIMANAGER_H
 #define PERSWIFIMANAGER_H
 
+#if defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
+#elif defined(ESP32)
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#endif
 #include <ESPAsyncWebServer.h>
 #include <DNSServer.h>
 
@@ -30,7 +28,11 @@ class PersWiFiManager {
 
     bool begin(const String& ssid = "", const String& pass = "");
 
+    void resetSettings();
+
     String getApSsid();
+
+    String getSsid();
 
     void setApCredentials(const String& apSsid, const String& apPass = "");
 
@@ -51,6 +53,7 @@ class PersWiFiManager {
 
     bool _connectNonBlock;
     unsigned long _connectStartTime;
+    bool _freshConnectionAttempt;
 
     WiFiChangeHandlerFunction _connectHandler;
     WiFiChangeHandlerFunction _apHandler;
