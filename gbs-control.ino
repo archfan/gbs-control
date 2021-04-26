@@ -350,17 +350,7 @@ void externalClockGenResetClock() {
     SerialM.print(F("preset display clock: 0x"));
     SerialM.println(activeDisplayClock, HEX);
   }
-
-  // problem: around 108MHz the library seems to double the clock
-  // maybe there are regs to check for this and resetPLL
-  if (rto->freqExtClockGen == 108000000) {
-    Si.setFreq(0, 87000000); delay(1);  // quick fix
-  }
-  // same thing it seems at 40500000
-  if (rto->freqExtClockGen == 40500000) {
-    Si.setFreq(0, 48500000); delay(1);  // quick fix
-  }
-
+  
   Si.setFreq(0, rto->freqExtClockGen);
   GBS::PAD_CKIN_ENZ::write(0);  // 0 = clock input enable (pin40)
 
