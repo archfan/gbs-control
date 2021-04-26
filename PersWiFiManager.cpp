@@ -117,19 +117,12 @@ void PersWiFiManager::setupWiFiHandlers() {
              + ((WiFi.encryptionType(ix[i]) == WIFI_AUTH_OPEN) ? 0 : 1) + "," + WiFi.SSID(ix[i]);
 #endif
     }
-
       }
       WiFi.scanDelete();
-    }
-
-#if defined(ESP8266)
-	ESP.wdtDisable();
-	ESP.reset();
-#elif defined(ESP32)
-    ESP.restart();
-#endif
-	delay(2000);
-  });
+}
+  //send string to client
+  request->send(200, "text/plain", s);
+  }); //_server->on /wifi/list
 
 }//setupWiFiHandlers
 
