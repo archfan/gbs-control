@@ -29,7 +29,6 @@
 // https://github.com/me-no-dev/ESPAsyncWebServer
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include "FS.h"
 #include <DNSServer.h>
 #include <WiFiUdp.h>
 #include <ESP8266mDNS.h>  // mDNS library for finding gbscontrol.local on the local network
