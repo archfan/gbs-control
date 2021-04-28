@@ -435,14 +435,13 @@ void externalClockGenInitialize() {
 }
 
 void externalClockGenDetectPresence() {
-  const uint8_t siAddress = 0x60; // default Si5351 address 
   uint8_t retVal = 0;
 
-  Wire.beginTransmission(siAddress);
+  Wire.beginTransmission(SIADDR);
   // want to see some bits on reg 183, on reset at least [7:6] should be high
   Wire.write(183);
   Wire.endTransmission();
-  Wire.requestFrom(siAddress, (uint8_t)1, (uint8_t)0);
+  Wire.requestFrom(SIADDR, (uint8_t)1, (uint8_t)0);
 
   while (Wire.available())
   {
