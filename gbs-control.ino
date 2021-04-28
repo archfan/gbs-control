@@ -1,3 +1,4 @@
+#include <LittleFS.h>
 #include "ntsc_240p.h"
 #include "pal_240p.h"
 #include "ntsc_720x480.h"
@@ -4043,7 +4044,7 @@ void applyPresets(uint8_t result) {
     }
 #if defined(ESP8266)
     else if (uopt->presetPreference == 2) {
-      const uint8_t* preset = loadPresetFromSPIFFS(result);
+      const uint8_t* preset = loadPresetFromLittleFS(result);
       writeProgramArrayNew(preset, false);
     }
     else if (uopt->presetPreference == 4) {
@@ -4081,7 +4082,7 @@ void applyPresets(uint8_t result) {
     }
 #if defined(ESP8266)
     else if (uopt->presetPreference == 2) {
-      const uint8_t* preset = loadPresetFromSPIFFS(result);
+      const uint8_t* preset = loadPresetFromLittleFS(result);
       writeProgramArrayNew(preset, false);
     }
     else if (uopt->presetPreference == 4) {
@@ -7032,21 +7033,21 @@ void setup() {
   GBS::PLLAD_VCORST::write(1); GBS::PLLAD_PDZ::write(0);  // AD PLL off
 
   // file system (web page, custom presets, ect)
-  if (!SPIFFS.begin()) {
-    SerialM.println(F("SPIFFS mount failed! ((1M SPIFFS) selected?)"));
+  if (!LittleFS.begin()) {
+    SerialM.println(F("LittleFS mount failed! ((1M LittleFS) selected?)"));
   }
   else {
     // load user preferences file
-    File f = SPIFFS.open("/preferencesv2.txt", "r");
+    File f = LittleFS.open("/preferencesv2.txt", "r");
     if (!f) {
       SerialM.println(F("no preferences file yet, create new"));
       loadDefaultUserOptions();
-      saveUserPrefs(); // if this fails, there must be a spiffs problem
+      saveUserPrefs(); // if this fails, there must be a LittleFS problem
     }
     else {
-      //on a fresh / spiffs not formatted yet MCU:  userprefs.txt open ok //result = 207
+      //on a fresh / LittleFS not formatted yet MCU:  userprefs.txt open ok //result = 207
       uopt->presetPreference = (uint8_t)(f.read() - '0'); // #1
-      if (uopt->presetPreference > 10) uopt->presetPreference = 0; // fresh spiffs ?
+      if (uopt->presetPreference > 10) uopt->presetPreference = 0; // fresh LittleFS ?
 
       uopt->enableFrameTimeLock = (uint8_t)(f.read() - '0');
       if (uopt->enableFrameTimeLock > 1) uopt->enableFrameTimeLock = 0;
@@ -8698,7 +8699,7 @@ void handleType2Command(char argument) {
   }
   break;
   case '4': // save custom preset
-    savePresetToSPIFFS();
+    savePresetToLittleFS();
     uopt->presetPreference = 2; // custom
     saveUserPrefs();
     break;
@@ -8739,15 +8740,15 @@ void handleType2Command(char argument) {
     delay(60);
     ESP.reset(); // don't use restart(), messes up websocket reconnects
     break;
-  case 'e': // print files on spiffs
+  case 'e': // print files on LittleFS
   {
-    Dir dir = SPIFFS.openDir("/");
+    Dir dir = LittleFS.openDir("/");
     while (dir.next()) {
       SerialM.print(dir.fileName()); SerialM.print(" "); SerialM.println(dir.fileSize());
       delay(1); // wifi stack
     }
     ////
-    File f = SPIFFS.open("/preferencesv2.txt", "r");
+    File f = LittleFS.open("/preferencesv2.txt", "r");
     if (!f) {
       SerialM.println(F("failed opening preferences file"));
     }
@@ -9186,10 +9187,10 @@ void startWebserver()
   server.on("/bin/slots.bin", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (ESP.getFreeHeap() > 10000) {
       SlotMetaArray slotsObject;
-      File slotsBinaryFileRead = SPIFFS.open(SLOTS_FILE, "r");
+      File slotsBinaryFileRead = LittleFS.open(SLOTS_FILE, "r");
 
       if (!slotsBinaryFileRead) {
-        File slotsBinaryFileWrite = SPIFFS.open(SLOTS_FILE, "w");
+        File slotsBinaryFileWrite = LittleFS.open(SLOTS_FILE, "w");
         for (int i = 0; i < SLOTS_TOTAL; i++) {
           slotsObject.slot[i].slot = i;
           slotsObject.slot[i].presetID = 0;
@@ -9207,7 +9208,7 @@ void startWebserver()
         slotsBinaryFileRead.close();
       }
 
-      request->send(SPIFFS, "/slots.bin", "application/octet-stream");
+      request->send(LittleFS, "/slots.bin", "application/octet-stream");
     }
   });
 
@@ -9240,13 +9241,13 @@ void startWebserver()
 
       if (params > 0) {
         SlotMetaArray slotsObject;
-        File slotsBinaryFileRead = SPIFFS.open(SLOTS_FILE, "r");
+        File slotsBinaryFileRead = LittleFS.open(SLOTS_FILE, "r");
 
         if (slotsBinaryFileRead) {
           slotsBinaryFileRead.read((byte *)&slotsObject, sizeof(slotsObject));
           slotsBinaryFileRead.close();
         } else {
-          File slotsBinaryFileWrite = SPIFFS.open(SLOTS_FILE, "w");
+          File slotsBinaryFileWrite = LittleFS.open(SLOTS_FILE, "w");
 
           for (int i = 0; i < SLOTS_TOTAL; i++) {
             slotsObject.slot[i].slot = i;
@@ -9285,7 +9286,7 @@ void startWebserver()
         slotsObject.slot[slotIndex].wantStepResponse = uopt->wantStepResponse;
         slotsObject.slot[slotIndex].wantPeaking = uopt->wantPeaking;
 
-        File slotsBinaryOutputFile = SPIFFS.open(SLOTS_FILE, "w");
+        File slotsBinaryOutputFile = LittleFS.open(SLOTS_FILE, "w");
         slotsBinaryOutputFile.write((byte *)&slotsObject, sizeof(slotsObject));
         slotsBinaryOutputFile.close();
 
@@ -9296,15 +9297,15 @@ void startWebserver()
     request->send(200, "application/json", result ? "true" : "false");
   });
 
-  server.on("/spiffs/upload", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/LittleFS/upload", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "application/json", "true");
   });
 
-  server.on("/spiffs/upload", HTTP_POST,
+  server.on("/LittleFS/upload", HTTP_POST,
     [](AsyncWebServerRequest *request) { request->send(200, "application/json", "true"); },
     [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
       if(!index){
-        request->_tempFile = SPIFFS.open("/"+filename, "w");
+        request->_tempFile = LittleFS.open("/"+filename, "w");
       }
       if(len) {
         request->_tempFile.write(data,len);
@@ -9315,11 +9316,11 @@ void startWebserver()
     }
   );
 
-  server.on("/spiffs/download", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/LittleFS/download", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (ESP.getFreeHeap() > 10000) {
       int params = request->params();
       if (params > 0) {
-          request->send(SPIFFS, request->getParam(0)->value(),String(), true);
+          request->send(LittleFS, request->getParam(0)->value(),String(), true);
       } else {
           request->send(200, "application/json", "false");
       }
@@ -9328,9 +9329,9 @@ void startWebserver()
     }
   });
 
-  server.on("/spiffs/dir", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/LittleFS/dir", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (ESP.getFreeHeap() > 10000) {
-      Dir dir = SPIFFS.openDir("/");
+      Dir dir = LittleFS.openDir("/");
       String output = "[";
 
       while (dir.next()) {
@@ -9350,8 +9351,8 @@ void startWebserver()
     request->send(200, "application/json", "false");
   });
 
-  server.on("/spiffs/format", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "application/json", SPIFFS.format() ? "true":"false");
+  server.on("/LittleFS/format", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json", LittleFS.format() ? "true":"false");
   });
 
   server.on("/wifi/status", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -9362,7 +9363,7 @@ void startWebserver()
   server.on("/gbs/restore-filters", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     SlotMetaArray slotsObject;
-    File slotsBinaryFileRead = SPIFFS.open(SLOTS_FILE, "r");
+    File slotsBinaryFileRead = LittleFS.open(SLOTS_FILE, "r");
     bool result = false;
     if (slotsBinaryFileRead) {
       slotsBinaryFileRead.read((byte *)&slotsObject, sizeof(slotsObject));
@@ -9456,11 +9457,11 @@ void initUpdateOTA() {
     String type;
     if (ArduinoOTA.getCommand() == U_FLASH)
       type = "sketch";
-    else // U_SPIFFS
+    else // U_LittleFS
       type = "filesystem";
 
-    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-    SPIFFS.end();
+    // NOTE: if updating LittleFS this would be the place to unmount LittleFS using LittleFS.end()
+    LittleFS.end();
     SerialM.println("Start updating " + type);
   });
   ArduinoOTA.onEnd([]() {
@@ -9489,13 +9490,13 @@ void StrClear(char *str, uint16_t length)
   }
 }
 
-const uint8_t* loadPresetFromSPIFFS(byte forVideoMode) {
+const uint8_t* loadPresetFromLittleFS(byte forVideoMode) {
   static uint8_t preset[432];
   String s = "";
   uint8_t slot = 0;
   File f;
 
-  f = SPIFFS.open("/preferencesv2.txt", "r");
+  f = LittleFS.open("/preferencesv2.txt", "r");
   if (f) {
     SerialM.println(F("preferencesv2.txt opened"));
     uint8_t result[3];
@@ -9505,7 +9506,7 @@ const uint8_t* loadPresetFromSPIFFS(byte forVideoMode) {
 
     f.close();
     if (result[2] < SLOTS_TOTAL) {  // # of slots
-      slot = result[2]; // otherwise not stored on spiffs
+      slot = result[2]; // otherwise not stored on LittleFS
     }
   }
   else {
@@ -9519,31 +9520,31 @@ const uint8_t* loadPresetFromSPIFFS(byte forVideoMode) {
   SerialM.print(": ");
 
   if (forVideoMode == 1) {
-    f = SPIFFS.open("/preset_ntsc." + String((char)slot), "r");
+    f = LittleFS.open("/preset_ntsc." + String((char)slot), "r");
   }
   else if (forVideoMode == 2) {
-    f = SPIFFS.open("/preset_pal." + String((char)slot), "r");
+    f = LittleFS.open("/preset_pal." + String((char)slot), "r");
   }
   else if (forVideoMode == 3) {
-    f = SPIFFS.open("/preset_ntsc_480p." + String((char)slot), "r");
+    f = LittleFS.open("/preset_ntsc_480p." + String((char)slot), "r");
   }
   else if (forVideoMode == 4) {
-    f = SPIFFS.open("/preset_pal_576p." + String((char)slot), "r");
+    f = LittleFS.open("/preset_pal_576p." + String((char)slot), "r");
   }
   else if (forVideoMode == 5) {
-    f = SPIFFS.open("/preset_ntsc_720p." + String((char)slot), "r");
+    f = LittleFS.open("/preset_ntsc_720p." + String((char)slot), "r");
   }
   else if (forVideoMode == 6) {
-    f = SPIFFS.open("/preset_ntsc_1080p." + String((char)slot), "r");
+    f = LittleFS.open("/preset_ntsc_1080p." + String((char)slot), "r");
   }
   else if (forVideoMode == 8) {
-    f = SPIFFS.open("/preset_medium_res." + String((char)slot), "r");
+    f = LittleFS.open("/preset_medium_res." + String((char)slot), "r");
   }
   else if (forVideoMode == 14) {
-    f = SPIFFS.open("/preset_vga_upscale." + String((char)slot), "r");
+    f = LittleFS.open("/preset_vga_upscale." + String((char)slot), "r");
   }
   else if (forVideoMode == 0) {
-    f = SPIFFS.open("/preset_unknown." + String((char)slot), "r");
+    f = LittleFS.open("/preset_unknown." + String((char)slot), "r");
   }
 
   if (!f) {
@@ -9569,13 +9570,13 @@ const uint8_t* loadPresetFromSPIFFS(byte forVideoMode) {
   return preset;
 }
 
-void savePresetToSPIFFS() {
+void savePresetToLittleFS() {
   uint8_t readout = 0;
   File f;
   uint8_t slot = 0;
 
   // first figure out if the user has set a preferenced slot
-  f = SPIFFS.open("/preferencesv2.txt", "r");
+  f = LittleFS.open("/preferencesv2.txt", "r");
   if (f) {
     uint8_t result[3];
     result[0] = f.read(); // todo: move file cursor manually
@@ -9594,31 +9595,31 @@ void savePresetToSPIFFS() {
   SerialM.print(F("saving to preset slot ")); SerialM.println(String((char)slot));
 
   if (rto->videoStandardInput == 1) {
-    f = SPIFFS.open("/preset_ntsc." + String((char)slot), "w");
+    f = LittleFS.open("/preset_ntsc." + String((char)slot), "w");
   }
   else if (rto->videoStandardInput == 2) {
-    f = SPIFFS.open("/preset_pal." + String((char)slot), "w");
+    f = LittleFS.open("/preset_pal." + String((char)slot), "w");
   }
   else if (rto->videoStandardInput == 3) {
-    f = SPIFFS.open("/preset_ntsc_480p." + String((char)slot), "w");
+    f = LittleFS.open("/preset_ntsc_480p." + String((char)slot), "w");
   }
   else if (rto->videoStandardInput == 4) {
-    f = SPIFFS.open("/preset_pal_576p." + String((char)slot), "w");
+    f = LittleFS.open("/preset_pal_576p." + String((char)slot), "w");
   }
   else if (rto->videoStandardInput == 5) {
-    f = SPIFFS.open("/preset_ntsc_720p." + String((char)slot), "w");
+    f = LittleFS.open("/preset_ntsc_720p." + String((char)slot), "w");
   }
   else if (rto->videoStandardInput == 6) {
-    f = SPIFFS.open("/preset_ntsc_1080p." + String((char)slot), "w");
+    f = LittleFS.open("/preset_ntsc_1080p." + String((char)slot), "w");
   }
   else if (rto->videoStandardInput == 8) {
-    f = SPIFFS.open("/preset_medium_res." + String((char)slot), "w");
+    f = LittleFS.open("/preset_medium_res." + String((char)slot), "w");
   }
   else if (rto->videoStandardInput == 14) {
-    f = SPIFFS.open("/preset_vga_upscale." + String((char)slot), "w");
+    f = LittleFS.open("/preset_vga_upscale." + String((char)slot), "w");
   }
   else if (rto->videoStandardInput == 0) {
-    f = SPIFFS.open("/preset_unknown." + String((char)slot), "w");
+    f = LittleFS.open("/preset_unknown." + String((char)slot), "w");
   }
 
   if (!f) {
@@ -9689,7 +9690,7 @@ void savePresetToSPIFFS() {
 }
 
 void saveUserPrefs() {
-  File f = SPIFFS.open("/preferencesv2.txt", "w");
+  File f = LittleFS.open("/preferencesv2.txt", "w");
   if (!f) {
     SerialM.println(F("saveUserPrefs: open file failed"));
     return;
